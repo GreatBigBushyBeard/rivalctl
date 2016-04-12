@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 import os
 import sys
 import yaml
@@ -21,6 +23,7 @@ LED_STYLE_BREATHE_SLOW = 2
 LED_STYLE_BREATHE_MEDIUM = 3
 LED_STYLE_BREATHE_FAST = 4
 
+
 ###############################################################################
 # Auxiliary functions
 #
@@ -36,7 +39,8 @@ def find_device_path(hid_id):
                 if child.subsystem == 'hidraw':
                     return child['DEVNAME']
 
-def open_hiddevice(hid_id, dev_path = None):
+
+def open_hiddevice(hid_id, dev_path=None):
     """
     Open the device representing the mouse. If dev_path is None, it tries to
     find it.
@@ -44,7 +48,7 @@ def open_hiddevice(hid_id, dev_path = None):
     if dev_path is None:
         dev_path = find_device_path(hid_id)
     try:
-        device =  hidraw.HIDRaw(open(dev_path, 'w+'))
+        device = hidraw.HIDRaw(open(dev_path, 'w+'))
     except PermissionError:
         print("You don't have write access to %s." % (dev_path))
         print("""
@@ -61,17 +65,19 @@ def open_hiddevice(hid_id, dev_path = None):
         sys.exit(1)
     return device
 
-def open_device(dev_path = None):
+
+def open_device(dev_path=None):
     """
     Open the HID device corresponding to the mouse. Returns a Rival object.
     """
     try:
-        device = Rival100(dev_path = dev_path)
+        device = Rival100(dev_path=dev_path)
     except TypeError:   # Not a Rival 100. Default to generic ¿300?
         if DEBUG:
             print("Testing for generic SteelSeries Rival...")
-        device = Rival(dev_path = dev_path)
+        device = Rival(dev_path=dev_path)
     return device
+
 
 def is_strtype(obj):
     """
@@ -82,140 +88,6 @@ def is_strtype(obj):
         return isinstance(obj, basestring)
     except NameError:
         return isinstance(obj, str)
-
-###############################################################################
-# Main classes for encapsulate mouse features.
-#
-
-class Rival(object):
-    """
-    Base class for generic a Rival mouse.
-    """
-
-    def __init__(self, hid_id = RIVAL_HID_ID, dev_path = None):
-        """
-        Constructor. It needs a HIDRaw device for initialization.
-        """
-        device = open_hiddevice(hid_id, dev_path)
-        self.__device = device
-        self.FACTORY_PROFILE = Profile()
-        self.FACTORY_PROFILE.logo_color = (255, 24, 0)
-        self.FACTORY_PROFILE.wheel_color = (255, 24, 0)
-        self.FACTORY_PROFILE.logo_style = 2
-        self.FACTORY_PROFILE.wheel_style = 2
-        self.FACTORY_PROFILE.cpi1 = 800
-        self.FACTORY_PROFILE.cpi2 = 1600
-        self.FACTORY_PROFILE.polling_rate = 1000
-        self.__profile = self.FACTORY_PROFILE
-
-    def send(self, report):
-        """
-        Send a report packet to the device.
-        """
-        self.__device.sendFeatureReport(report)
-
-    def _parse_led_color(self, led, color):
-        if led not in (LED_LOGO, LED_WHEEL):
-            raise ValueError("Invalid LED: %s" % (led,))
-        if is_strtype(color):
-            try:
-                color = webcolors.name_to_rgb(color)
-            except ValueError:
-                try:
-                    color = webcolors.hex_to_rgb(color)
-                except ValueError:
-                    color = webcolors.hex_to_rgb("#" + color)
-        if not hasattr(color, '__iter__'):
-            raise ValueError("Invalid Color: %s" % (color, ))
-        return color
-
-    def set_led_color(self, led, color):
-        color = self._parse_led_color(led, color)
-        # Para el Rival ¿300?
-        args = (chr(led),) + tuple([chr(int(b)) for b in color])
-        return "\x08%s%s%s%s" % args
-
-    def set_led_style(self, led, style):
-        if led not in (LED_LOGO, LED_WHEEL):
-            raise ValueError("Invalid LED: %s" % (led,))
-        if 1 <= style <= 4:
-            return '\x07%s%s' % (chr(led), chr(style))
-        raise ValueError(
-                "Invalid Style %s, valid values are 1, 2, 3 and 4" % (style,))
-
-    def set_wheel_color(self, color):
-        return self.set_led_color(LED_WHEEL, color)
-
-    def set_logo_color(self, color):
-        return self.set_led_color(LED_LOGO, color)
-
-    def set_wheel_style(self, style):
-        return self.set_led_style(LED_WHEEL, style)
-
-    def set_logo_style(self, style):
-        return self.set_led_style(LED_LOGO, style)
-
-    def set_cpi(self, cpinum, value):
-        if cpinum not in (1,2):
-            raise ValueError("Invalid CPI Number: %s" % (cpinum,))
-        if value % 50:
-            raise ValueError("CPI Must be increments of 50")
-        if not (50 <= value <= 6500):
-            raise ValueError("CPI Must be between 50 and 6500")
-        return '\x03%s%s' % (chr(cpinum), chr(value/50),)
-
-    def set_cpi_1(self, value):
-        return self.set_cpi(1, value)
-
-    def set_cpi_2(self, value):
-        return self.set_cpi(2, value)
-
-    def set_polling_rate(rate):
-        if rate == 1000:
-            b = '\x01'
-        elif rate == 500:
-            b = '\x02'
-        elif rate == 250:
-            b = '\x03'
-        elif rate == 125:
-            b = '\x04'
-        else:
-            raise ValueError("Invalid Polling Rate, valid values are 1000,"
-                             " 500, 250 and 125")
-        return "\x04\x00%s" % (b,)
-
-    def commit(self):
-        return '\x09'
-
-
-class Rival100(Rival):
-    """
-    Implements Rival100 protocol. Sighlty different from other Rival mice.
-    """
-    def __init__(self, hid_id = RIVAL100_HID_ID, dev_path = None):
-        """
-        Constructor. It needs a HIDRaw device for initialization.
-        """
-        Rival.__init__(self, hid_id, dev_path)
-        device = open_hiddevice(hid_id, dev_path)
-        self.__device = device
-        self.FACTORY_PROFILE = Profile()
-        self.FACTORY_PROFILE.logo_color = (255, 24, 0)
-        self.FACTORY_PROFILE.wheel_color = (255, 24, 0)
-        self.FACTORY_PROFILE.logo_style = 2
-        self.FACTORY_PROFILE.wheel_style = 2
-        self.FACTORY_PROFILE.cpi1 = 1000
-        self.FACTORY_PROFILE.cpi2 = 2000
-        self.FACTORY_PROFILE.polling_rate = 1000
-        self.__profile = self.FACTORY_PROFILE
-
-    def set_led_color(self, led, color):
-        color = self._parse_led_color(led, color)
-        # Para el rival 100
-        args = tuple([chr(int(b)) for b in color])
-            # Wheel and logo color cannot be set separately.
-            # «led» is always \x00
-        return ("\x05\x00%s%s%s" + (27 * "\x00")) % args
 
 
 ###############################################################################
@@ -244,8 +116,7 @@ class Profile(object):
             elif hasattr(value, '__iter__'):
                 rgb = tuple(value)
         except ValueError as e:
-            pass
-
+            print(e, file=sys.stderr)
         return rgb
 
     @property
@@ -290,7 +161,6 @@ class Profile(object):
                 if x.lower() in ('.yml', '.yaml', ''):
                     if n.lower() == name:
                         return os.path.join(_dir, f)
-        profile = None
         if os.path.exists(name):
             return name
         f = find_profile_file(".")
@@ -305,7 +175,7 @@ class Profile(object):
     @classmethod
     def from_yaml(cls, stream):
         cfg = yaml.load(stream)
-        profile = cls.copy_profile(FACTORY_PROFILE)
+        profile = cls.copy_profile(cls.FACTORY_PROFILE)
         for k, v in cfg.items():
             if hasattr(profile, k):
                 setattr(profile, k, v)
@@ -313,15 +183,150 @@ class Profile(object):
 
     def to_report_list(self, current_state=None):
         items = [
-            set_wheel_color(self.wheel_color),
-            set_wheel_style(self.wheel_style),
-            set_logo_color(self.logo_color),
-            set_logo_style(self.logo_style),
-            set_cpi_1(self.cpi1),
-            set_cpi_2(self.cpi2),
-            set_polling_rate(self.polling_rate)
+            self.set_wheel_color(self.wheel_color),
+            self.set_wheel_style(self.wheel_style),
+            self.set_logo_color(self.logo_color),
+            self.set_logo_style(self.logo_style),
+            self.set_cpi_1(self.cpi1),
+            self.set_cpi_2(self.cpi2),
+            self.set_polling_rate(self.polling_rate)
         ]
         if current_state:
             return [i for i in items if i not in current_state]
         return items
 
+
+###############################################################################
+# Main classes for encapsulate mouse features.
+#
+
+class Rival(object):
+    """
+    Base class for generic a Rival mouse.
+    """
+    FACTORY_PROFILE = Profile()
+    FACTORY_PROFILE.logo_color = (255, 24, 0)
+    FACTORY_PROFILE.wheel_color = (255, 24, 0)
+    FACTORY_PROFILE.logo_style = 2
+    FACTORY_PROFILE.wheel_style = 2
+    FACTORY_PROFILE.cpi1 = 800
+    FACTORY_PROFILE.cpi2 = 1600
+    FACTORY_PROFILE.polling_rate = 1000
+
+    def __init__(self, hid_id=RIVAL_HID_ID, dev_path=None):
+        """
+        Constructor. It needs a HIDRaw device for initialization.
+        """
+        device = open_hiddevice(hid_id, dev_path)
+        self.__device = device
+        self.__profile = Rival.FACTORY_PROFILE
+
+    def send(self, report):
+        """
+        Send a report packet to the device.
+        """
+        self.__device.sendFeatureReport(report)
+
+    def _parse_led_color(self, led, color):
+        if led not in (LED_LOGO, LED_WHEEL):
+            raise ValueError("Invalid LED: %s" % (led,))
+        if is_strtype(color):
+            try:
+                color = webcolors.name_to_rgb(color)
+            except ValueError:
+                try:
+                    color = webcolors.hex_to_rgb(color)
+                except ValueError:
+                    color = webcolors.hex_to_rgb("#" + color)
+        if not hasattr(color, '__iter__'):
+            raise ValueError("Invalid Color: %s" % (color, ))
+        return color
+
+    def set_led_color(self, led, color):
+        color = self._parse_led_color(led, color)
+        # Para el Rival ¿300?
+        args = (chr(led),) + tuple([chr(int(b)) for b in color])
+        return "\x08%s%s%s%s" % args
+
+    def set_led_style(self, led, style):
+        if led not in (LED_LOGO, LED_WHEEL):
+            raise ValueError("Invalid LED: %s" % (led,))
+        if 1 <= style <= 4:
+            return '\x07%s%s' % (chr(led), chr(style))
+        raise ValueError(
+            "Invalid Style %s, valid values are 1, 2, 3 and 4" % (style,))
+
+    def set_wheel_color(self, color):
+        return self.set_led_color(LED_WHEEL, color)
+
+    def set_logo_color(self, color):
+        return self.set_led_color(LED_LOGO, color)
+
+    def set_wheel_style(self, style):
+        return self.set_led_style(LED_WHEEL, style)
+
+    def set_logo_style(self, style):
+        return self.set_led_style(LED_LOGO, style)
+
+    def set_cpi(self, cpinum, value):
+        if cpinum not in (1, 2):
+            raise ValueError("Invalid CPI Number: %s" % (cpinum,))
+        if value % 50:
+            raise ValueError("CPI Must be increments of 50")
+        if not (50 <= value <= 6500):
+            raise ValueError("CPI Must be between 50 and 6500")
+        return '\x03%s%s' % (chr(cpinum), chr(value / 50))
+
+    def set_cpi_1(self, value):
+        return self.set_cpi(1, value)
+
+    def set_cpi_2(self, value):
+        return self.set_cpi(2, value)
+
+    def set_polling_rate(self, rate):
+        if rate == 1000:
+            b = '\x01'
+        elif rate == 500:
+            b = '\x02'
+        elif rate == 250:
+            b = '\x03'
+        elif rate == 125:
+            b = '\x04'
+        else:
+            raise ValueError("Invalid Polling Rate, valid values are 1000,"
+                             " 500, 250 and 125")
+        return "\x04\x00%s" % (b,)
+
+    def commit(self):
+        return '\x09'
+
+
+class Rival100(Rival):
+    """
+    Implements Rival100 protocol. Sighlty different from other Rival mice.
+    """
+    FACTORY_PROFILE = Profile()
+    FACTORY_PROFILE.logo_color = (255, 24, 0)
+    FACTORY_PROFILE.wheel_color = (255, 24, 0)
+    FACTORY_PROFILE.logo_style = 2
+    FACTORY_PROFILE.wheel_style = 2
+    FACTORY_PROFILE.cpi1 = 1000
+    FACTORY_PROFILE.cpi2 = 2000
+    FACTORY_PROFILE.polling_rate = 1000
+
+    def __init__(self, hid_id=RIVAL100_HID_ID, dev_path=None):
+        """
+        Constructor. It needs a HIDRaw device for initialization.
+        """
+        Rival.__init__(self, hid_id, dev_path)
+        device = open_hiddevice(hid_id, dev_path)
+        self.__device = device
+        self.__profile = Rival100.FACTORY_PROFILE
+
+    def set_led_color(self, led, color):
+        color = self._parse_led_color(led, color)
+        # Para el rival 100
+        args = tuple([chr(int(b)) for b in color])
+        # Wheel and logo color cannot be set separately.
+        # «led» is always \x00
+        return ("\x05\x00%s%s%s" + (27 * "\x00")) % args
