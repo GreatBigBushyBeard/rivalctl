@@ -10,6 +10,8 @@ NOTES
 
 * Now working for Steelseries Rival 100. Only led color change supported by the moment.
 
+* Rival 300 CS:GO is also now supported
+
 
 WARNING
 =======
