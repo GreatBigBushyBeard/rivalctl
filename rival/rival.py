@@ -12,6 +12,7 @@ import webcolors
 DEBUG = True
 
 RIVAL_HID_ID = '0003:00001038:00001384'     # SteelSeries Rival ¿300? ¿6500?
+RIVAL_CSGO_HID_ID = '0003:00001038:00001394'     # SteelSeries Rival 300 CSGO
 RIVAL100_HID_ID = '0003:00001038:00001702'     # SteelSeries Rival 100
 
 LED_LOGO = 1
@@ -46,9 +47,13 @@ def open_hiddevice(hid_id, dev_path=None):
     """
     if dev_path is None:
         dev_path = find_device_path(hid_id)
+        
+    if dev_path is None: #dev_path is still None, therefore none was found
+        raise TypeError()
+        
     try:
         device = hidraw.HIDRaw(open(dev_path, 'w+'))
-    except PermissionError:
+    except: #PermissionError: Temp removal as I'm getting not found errors while using this
         print("You don't have write access to %s." % (dev_path))
         print("""
         Run this script with sudo or ensure that your user belongs to the
@@ -69,12 +74,25 @@ def open_device(dev_path=None):
     """
     Open the HID device corresponding to the mouse. Returns a Rival object.
     """
+    
+    device = None
+    
     try:
         device = Rival100(dev_path=dev_path)
     except TypeError:   # Not a Rival 100. Default to generic ¿300?
-        if DEBUG:
-            print("Testing for generic SteelSeries Rival...")
-        device = Rival(dev_path=dev_path)
+        try:
+            if DEBUG:
+                print("Testing for generic SteelSeries Rival...")
+            device = Rival(dev_path=dev_path)
+        except TypeError:
+            if DEBUG:
+                print("Testing for CSGO SteelSeries Rival...")
+            device = RivalCSGO(dev_path=dev_path)
+    
+    if device is None:
+        print("Unable to find a supported mouse.\nOnly Rival 300, Rival 300 CSGO and Rival 100 are supported")
+        sys.exit(1)
+    
     return device
 
 
@@ -299,6 +317,12 @@ class Rival(object):
     def commit(self):
         return '\x09'
 
+class RivalCSGO(Rival):
+    def __init__(self, hid_id=RIVAL_CSGO_HID_ID, dev_path=None):
+        """
+        Constructor. It needs a HIDRaw device for initialization.
+        """
+        Rival.__init__(self, hid_id, dev_path)
 
 class Rival100(Rival):
     """
