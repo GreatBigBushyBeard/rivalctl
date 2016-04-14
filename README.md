@@ -2,7 +2,7 @@
 NOTES
 =====
 
-* Forked from [andrepl](https://github.com/andrepl/rivalctl).
+* Orignally Forked from [andrepl](https://github.com/andrepl/rivalctl), directly forked from [pacoqueen](https://github.com/pacoqueen/rivalctl)
 
 * Now working for Steelseries Rival 100. Only led color change supported at the moment.
 

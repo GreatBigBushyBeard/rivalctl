@@ -353,3 +353,12 @@ class Rival100(Rival):
         # Wheel and logo color cannot be set separately.
         # «led» is always \x00
         return ("\x05\x00%s%s%s" + (27 * "\x00")) % args
+        
+    def set_led_style(self, led, style):
+        #if led not in (LED_LOGO, LED_WHEEL):
+            #raise ValueError("Invalid LED: %s" % (led,))
+            
+        if 1 <= style <= 4:
+            return '\x07\x00%s' % (chr(style))
+        raise ValueError(
+            "Invalid Style %s, valid values are 1, 2, 3 and 4" % (style,))
