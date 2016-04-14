@@ -1,14 +1,10 @@
-![GPLv3](http://www.gnu.org/graphics/gplv3-127x51.png)
-
 
 NOTES
 =====
 
 * Forked from [andrepl](https://github.com/andrepl/rivalctl).
 
-* Updated license to GPLv3.
-
-* Now working for Steelseries Rival 100. Only led color change supported by the moment.
+* Now working for Steelseries Rival 100. Only led color change supported at the moment.
 
 * Rival 300 CS:GO is also now supported
 
@@ -17,9 +13,6 @@ WARNING
 =======
 
 This is an unofficial tool, and it's functionality is limited to what I was able to reverse engineer.
-
-SteelSeries does not **and will not support GNU/Linux users**, so please take your business elsewhere.  This tool is for those unfortunate enough to have already purchased this mouse and realized it's crippled under GNU/Linux.
-
 
 
 rivalctl
